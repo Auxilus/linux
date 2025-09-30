@@ -201,6 +201,7 @@ static int fat_writepages(struct address_space *mapping,
 
 static int fat_read_folio(struct file *file, struct folio *folio)
 {
+	printk(KERN_DEBUG "reading folio\n");
 	return mpage_read_folio(folio, fat_get_block);
 }
 
