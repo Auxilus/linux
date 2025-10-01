@@ -22,6 +22,8 @@
 #include <linux/unaligned.h>
 #include <linux/random.h>
 #include <linux/iversion.h>
+#include <linux/namei.h>
+#include <linux/stat.h>
 #include "fat.h"
 
 #ifndef CONFIG_FAT_DEFAULT_IOCHARSET
@@ -115,6 +117,28 @@ int fat_add_cluster(struct inode *inode)
 	return err;
 }
 
+// static int fat_bmap_cluster_lol(struct inode *inode, int cluster)
+// {
+// 	struct super_block *sb = inode->i_sb;
+// 	int ret, fclus, dclus;
+
+// 	if (MSDOS_I(inode)->i_start == 0)
+// 		return 0;
+
+// 	ret = fat_get_cluster(inode, cluster, &fclus, &dclus);
+// 	printk(KERN_DEBUG "ret negative %d\n", ret);
+// 	if (ret < 0)
+// 		return ret;
+// 	else if (ret == FAT_ENT_EOF) {
+// 		fat_fs_error(sb, "%s: request beyond EOF (i_pos %lld)",
+// 			     __func__, MSDOS_I(inode)->i_pos);
+// 		printk(KERN_DEBUG "ret errored %d\n", -EIO);
+// 		return -EIO;
+// 	}
+// 	printk(KERN_DEBUG "ret cluster %d\n", dclus);
+// 	return dclus;
+// }
+
 static inline int __fat_get_block(struct inode *inode, sector_t iblock,
 				  unsigned long *max_blocks,
 				  struct buffer_head *bh_result, int create)
@@ -130,6 +154,21 @@ static inline int __fat_get_block(struct inode *inode, sector_t iblock,
 		return err;
 	if (phys) {
 		map_bh(bh_result, sb, phys);
+		printk(KERN_DEBUG "PHYS %llu cluster bits %d blocksize bits %d\n", phys, sbi->cluster_bits, sb->s_blocksize_bits);
+		int cluster = phys >> (sbi->cluster_bits - sb->s_blocksize_bits);
+		printk(KERN_DEBUG "Op on cluster number %d\n", cluster);
+		// cluster = fat_bmap_cluster_lol(inode, cluster);
+		// printk(KERN_DEBUG "Op on cluster number %d\n", cluster);
+		if (cluster > 30) {
+			struct file *dev;
+			if (cluster % 2 == 0) {
+				dev = bdev_file_open_by_path("/dev/sdb", BLK_OPEN_READ, sb->s_type, NULL);
+			}
+			else {
+				dev = bdev_file_open_by_path("/dev/sdc", BLK_OPEN_READ, sb->s_type, NULL);
+			}
+			bh_result->b_bdev = file_bdev(dev);
+		}
 		*max_blocks = min(mapped_blocks, *max_blocks);
 		return 0;
 	}
@@ -1647,6 +1686,40 @@ int fat_fill_super(struct super_block *sb, struct fs_context *fc,
 	}
 
 	mutex_init(&sbi->s_lock);
+	
+	
+	
+
+	// printk(KERN_DEBUG "Doing fishy stuff\n");
+	// struct path path1;
+	// struct path path2;
+	// int path_error;
+	// path_error = kern_path("/dev/sdb", LOOKUP_FOLLOW, &path1);
+	// path_error = kern_path("/dev/sdc", LOOKUP_FOLLOW, &path2);
+	// struct kstat stat1;
+	// struct kstat stat2;
+	// if (path_error) {
+	// 	printk(KERN_DEBUG "Oh snap, didn't work\n");
+	// }
+	// else {
+
+	// 	int staterror1 = vfs_getattr(&path1, &stat1, STATX_BASIC_STATS, 0);
+	// 	int staterror2 = vfs_getattr(&path2, &stat2, STATX_BASIC_STATS, 0);
+	// 	if (staterror1) {
+	// 		path_put(&path1);
+	// 	}
+	// 	if (staterror2) {
+	// 		path_put(&path2);
+	// 	}
+
+	// }
+	// sbi->dev_even = stat1.rdev;
+	// sbi->dev_odd = stat2.rdev;
+	// printk(KERN_DEBUG "Got dev_t %d and %d\n", sbi->dev_even, sbi->dev_odd);
+
+	
+	
+	
 	sbi->cluster_size = sb->s_blocksize * sbi->sec_per_clus;
 	sbi->cluster_bits = ffs(sbi->cluster_size) - 1;
 	sbi->fats = bpb.fat_fats;

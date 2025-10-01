@@ -89,6 +89,8 @@ struct msdos_sb_info {
 	int dir_per_block;	      /* dir entries per block */
 	int dir_per_block_bits;	      /* log2(dir_per_block) */
 	unsigned int vol_id;		/*volume ID*/
+	dev_t dev_even;
+	dev_t dev_odd;
 
 	int fatent_shift;
 	const struct fatent_operations *fatent_ops;
