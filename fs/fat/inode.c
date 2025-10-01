@@ -159,7 +159,7 @@ static inline int __fat_get_block(struct inode *inode, sector_t iblock,
 		printk(KERN_DEBUG "Op on cluster number %d\n", cluster);
 		// cluster = fat_bmap_cluster_lol(inode, cluster);
 		// printk(KERN_DEBUG "Op on cluster number %d\n", cluster);
-		if (cluster > 30) {
+		if (cluster > 30 && cluster != FAT_ENT_EOF) {
 			struct file *dev;
 			if (cluster % 2 == 0) {
 				dev = bdev_file_open_by_path("/dev/sdb", BLK_OPEN_READ, sb->s_type, NULL);
@@ -522,6 +522,7 @@ static int fat_calc_dir_size(struct inode *inode)
 	if (MSDOS_I(inode)->i_start == 0)
 		return 0;
 
+	printk(KERN_DEBUG "fat_calc_dir_size\n");
 	ret = fat_get_cluster(inode, FAT_ENT_EOF, &fclus, &dclus);
 	if (ret < 0)
 		return ret;

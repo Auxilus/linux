@@ -118,6 +118,7 @@ int fat_chain_add(struct inode *inode, int new_dclus, int nr_cluster)
 	if (MSDOS_I(inode)->i_start) {
 		int fclus, dclus;
 
+		printk(KERN_DEBUG "fat_chain_add\n");
 		ret = fat_get_cluster(inode, FAT_ENT_EOF, &fclus, &dclus);
 		if (ret < 0)
 			return ret;

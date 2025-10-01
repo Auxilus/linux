@@ -297,6 +297,7 @@ static int fat_bmap_cluster(struct inode *inode, int cluster)
 	if (MSDOS_I(inode)->i_start == 0)
 		return 0;
 
+	printk(KERN_DEBUG "fat_bmap_cluster\n");
 	ret = fat_get_cluster(inode, cluster, &fclus, &dclus);
 	if (ret < 0)
 		return ret;
