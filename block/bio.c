@@ -245,8 +245,26 @@ static void bio_free(struct bio *bio)
 void bio_init(struct bio *bio, struct block_device *bdev, struct bio_vec *table,
 	      unsigned short max_vecs, blk_opf_t opf)
 {
+	dev_t even_dev, odd_dev;
+	struct file *even_file, *odd_file;
+	lookup_bdev("/dev/sdb", &even_dev);
+	lookup_bdev("/dev/sdc", &odd_dev);
+	printk(KERN_DEBUG "Opened even %d and odd %d\n", even_dev, odd_dev);
+	struct block_device *even_device = NULL;
+	struct block_device *odd_device = NULL;
+
+	if (even_dev > 0 && odd_dev > 0) {
+		even_file = bdev_file_open_by_dev(even_dev, BLK_OPEN_READ | BLK_OPEN_WRITE, NULL, NULL);
+		even_device = file_bdev(even_file);
+		odd_file = bdev_file_open_by_dev(odd_dev, BLK_OPEN_READ | BLK_OPEN_WRITE, NULL, NULL);
+		odd_device = file_bdev(odd_file);
+		printk(KERN_DEBUG "Disks even %s and odd %s\n", even_device->bd_disk->disk_name, odd_device->bd_disk->disk_name);
+	}
+
 	bio->bi_next = NULL;
 	bio->bi_bdev = bdev;
+	bio->bi_bdev_even = even_device;
+	bio->bi_bdev_odd = odd_device;
 	bio->bi_opf = opf;
 	bio->bi_flags = 0;
 	bio->bi_ioprio = 0;

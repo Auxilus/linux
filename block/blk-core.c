@@ -50,6 +50,7 @@
 #include "blk-cgroup.h"
 #include "blk-throttle.h"
 #include "blk-ioprio.h"
+#include "../fs/fat/fat.h"
 
 struct dentry *blk_debugfs_root;
 
@@ -778,7 +779,35 @@ static blk_status_t blk_validate_atomic_write_op_size(struct request_queue *q,
  */
 void submit_bio_noacct(struct bio *bio)
 {
+	struct super_block *sb = bio->bi_bdev->bd_holder;
+	printk(KERN_DEBUG "submit_bio_noacct received with fs type %s\n", sb != NULL ? sb->s_type->name : "");
 	struct block_device *bdev = bio->bi_bdev;
+	if (bio->bi_bdev_even != NULL && bio->bi_bdev_odd != NULL) {
+		// handle vfat for now
+		struct file_system_type *fs_type = sb->s_type;
+		if (strcmp(fs_type->name, "vfat") == 0) {
+			void *data = bio_data(bio);
+
+			printk(KERN_DEBUG "found vfat\n");
+			struct msdos_sb_info *sb_info = sb->s_fs_info;
+			if (sb_info->data_start < bio->bi_iter.bi_sector) {
+				printk(KERN_DEBUG "I/O data sector %s\n", (char*)data);
+				if (bio->bi_iter.bi_sector % 2 == 0) {
+					bdev = bio->bi_bdev_even;
+					bio->bi_bdev = bio->bi_bdev_even;
+				}
+				else {
+					bdev = bio->bi_bdev_odd;
+					bio->bi_bdev = bio->bi_bdev_odd		;
+				}
+				bio->bi_iter.bi_sector = bio->bi_iter.bi_sector - sb_info->data_start  - 1;
+			}
+		}
+	}
+	printk(KERN_DEBUG "Got submit_bio_noacct %s for %llu and size %u for device %s\n",
+		bio_op(bio) == REQ_OP_READ ? "READ" : "WRITE", 
+		bio->bi_iter.bi_sector, bio->bi_iter.bi_size,
+		bdev->bd_disk->disk_name);
 	struct request_queue *q = bdev_get_queue(bdev);
 	blk_status_t status = BLK_STS_IOERR;
 
