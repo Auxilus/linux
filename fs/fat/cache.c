@@ -224,6 +224,7 @@ static inline void cache_init(struct fat_cache_id *cid, int fclus, int dclus)
 
 int fat_get_cluster(struct inode *inode, int cluster, int *fclus, int *dclus)
 {
+	printk(KERN_DEBUG "Fetching cluster %d\n", cluster);
 	struct super_block *sb = inode->i_sb;
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 	const int limit = sb->s_maxbytes >> sbi->cluster_bits;
@@ -296,6 +297,7 @@ static int fat_bmap_cluster(struct inode *inode, int cluster)
 	if (MSDOS_I(inode)->i_start == 0)
 		return 0;
 
+	printk(KERN_DEBUG "fat_bmap_cluster\n");
 	ret = fat_get_cluster(inode, cluster, &fclus, &dclus);
 	if (ret < 0)
 		return ret;
